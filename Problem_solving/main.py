@@ -2,7 +2,6 @@ from __future__ import annotations
 import copy
 import hashlib
 import heapq
-import time
 from collections import deque
 import random
 from representation2 import GridVisualizer
@@ -16,8 +15,8 @@ class Grid:
         """
         self.board = copy.deepcopy(board)
         self.parent = None
-        # self.row = None
-        # self.col = None
+        self.row = None
+        self.col = None
         self.depth = 0
         hash(self)
 
@@ -162,7 +161,7 @@ class Grid:
 
         while ouvert:
             noeud = ouvert.pop()
-            ferme.add(noeud)
+            # ferme.add(noeud)
             state_count += 1
 
             print(f"Exploring state {state_count}, depth : {noeud.depth}")
@@ -256,7 +255,7 @@ class Grid:
 
     def evaluation_func(self,position,a,b,c,nb=0):
         world_3 = self.get_the_world(3,position=position)
-        world_5 = self.get_the_world(5,position=position)
+        world_5= self.get_the_world(5,position=position)
         number_of_ones_in_k3_world = Grid.get_number_of_ones(world_3)
         number_of_ones_in_k5_world = Grid.get_number_of_ones(world_5)
         p_3 = number_of_ones_in_k3_world - solve_rec(world_3,
@@ -272,7 +271,7 @@ class Grid:
         return  (a*p_5) + (b*p_3) - (self.depth/c)
 
 
-    def get_the_world(self, k: int, position: tuple[int, int]) -> list[list[int]]:
+    def get_the_world(self, k: int, position: tuple[int, int]):
         row, col = position
         half_k = k // 2
 
@@ -282,6 +281,10 @@ class Grid:
         end_col = min(len(self.board[0]), col + half_k + 1)
 
         world = [r[start_col:end_col] for r in self.board[start_row:end_row]]
+
+        relative_row = row - start_row
+        relative_col = col - start_col
+
         return copy.deepcopy(world)
 
 
@@ -327,29 +330,32 @@ def solve_rec(world, x: int, y: int, nb: int, n: int) -> int:
     return mx
 
 
+
+
+
 if __name__ == "__main__":
-    # 1 ,1, 50
+    # 1 ,0, 50  rw
     benchmark1 = [[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0], [0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0],
                   [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1],
                   [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
                   [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1], [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
                   [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1], [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
                   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]]
-    # 1, 1, 50 _ 2261
+    # 1, 1, 50 _ 2261               rw 1,1,50 _ 3158
     benchmark2 = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                   [1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1], [1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
                   [1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
                   [1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0], [1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0],
                   [1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0], [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
                   [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]]
-    # 1, 1, 10 _ 18612
+    # 1, 1, 10 _ 18612  rw _ 48448
     benchmark3 = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0], [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1],
                   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1],
                   [0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0], [0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0],
                   [0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1], [0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1],
                   [0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1], [0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1],
                   [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]]
-    # 1, 1, 50 _ 371
+    # 1, 1, 50 _ 371          rw_700
     benchmark4 = [[1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], [1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0],
                   [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1], [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                   [0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0], [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -379,11 +385,14 @@ if __name__ == "__main__":
                   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
 
-
-    gr = Grid(benchmark1)
+    gr = Grid(benchmark5)
      # for all benchmarks, the starting point is (3,3)
     gr.set_row_col(3, 3)
-    path = gr.solve_heur(1,1,50)
+    path = gr.solve_breadth()
+    # path = gr.solve_depth()
+    # path = gr.solve_random()
+    # path = gr.solve_heur(1, 1, 50) #benchmark2 , benchmark4
+    # path = gr.solve_heur(1, 1, 10)  #benchmark3
     if path:
       GridVisualizer(path)
     else:
