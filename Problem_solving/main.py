@@ -4,7 +4,7 @@ import hashlib
 import heapq
 from collections import deque
 import random
-from representation2 import GridVisualizer
+from representation import GridVisualizer
 
 class Grid:
     def __init__(self, board: list[list[int]]):
