@@ -15,8 +15,8 @@ class Grid:
         """
         self.board = copy.deepcopy(board)
         self.parent = None
-        self.row = None
-        self.col = None
+        #self.row = None
+        #self.col = None
         self.depth = 0
         hash(self)
 
