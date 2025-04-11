@@ -4,7 +4,7 @@ import hashlib
 import heapq
 from collections import deque
 import random
-from representation import GridVisualizer
+from representation2 import GridVisualizer
 
 class Grid:
     def __init__(self, board: list[list[int]]):
@@ -15,8 +15,8 @@ class Grid:
         """
         self.board = copy.deepcopy(board)
         self.parent = None
-        #self.row = None
-        #self.col = None
+        self.row = None
+        self.col = None
         self.depth = 0
         hash(self)
 
@@ -58,12 +58,8 @@ class Grid:
         Returns:
             int: the hash code
         """
-        # board_str = "".join(["".join(map(str, row)) for row in self.board])
-        # position_str = f"{self.row},{self.col}"
-        # full_string = board_str + "|" + position_str
-        # self.__hash_code =int.from_bytes(hashlib.md5(full_string.encode()).digest(), "little")
-
         s = "".join(["".join([f"{c}" for c in row]) for row in self.board])
+        s+=str(self.row)+","+str(self.col)
         self.__hash_code = int.from_bytes(hashlib.md5(s.encode()).digest(), "little")
         return self.__hash_code
 
@@ -161,7 +157,7 @@ class Grid:
 
         while ouvert:
             noeud = ouvert.pop()
-            # ferme.add(noeud)
+            ferme.add(noeud)
             state_count += 1
 
             print(f"Exploring state {state_count}, depth : {noeud.depth}")
@@ -185,10 +181,11 @@ class Grid:
             state_count = 0
 
             while ouvert_stack:
-                noeud = Grid.choice_and_pop(ouvert_stack)
-                # ferme_lookup.add(noeud)
+                idx = random.randrange(len(ouvert_stack))
+                ouvert_stack[idx], ouvert_stack[-1] = ouvert_stack[-1], ouvert_stack[idx]
+                noeud = ouvert_stack.pop()
+                ferme_lookup.add(noeud)
                 state_count += 1
-
                 print(f"Exploring state {state_count}, depth : {noeud.depth}")
 
                 if noeud.is_goal():
@@ -196,76 +193,53 @@ class Grid:
                     while noeud:
                         path_solution.append(noeud)
                         noeud = noeud.parent
-                    path_solution.reverse()
-                    return path_solution
+                    return path_solution[::-1]
 
                 for m in noeud.actions():
                     if m not in ferme_lookup:
                         ouvert_stack.append(m)
             return []
 
-    @staticmethod
-    def choice_and_pop(lst):
-        idx = random.randrange(len(lst))
-        lst[idx], lst[-1] = lst[-1], lst[idx]
-        return lst.pop()
 
     def solve_heur(self,a,b,c):
         """Solve the problem with a Heuristic Algorithm according to what has been explained in the statements"""
         ouvert_stack = []
-        eval_func = self.evaluation_func(
-            position=(3, 3),
-            a=a, b=b, c=c,
-            nb=0
-        )
-        heapq.heappush(ouvert_stack, (eval_func, id(self), self))
+        heapq.heappush(ouvert_stack, (self.evaluation_func(position=(self.row,self.col),a=a,b=b,c=c), id(self), self))
         ferme_lookup = set()
         state_count = 0
 
         while ouvert_stack:
             eval_score, _ , noeud = heapq.heappop(ouvert_stack)
-            # ferme_lookup.add(noeud)
+            ferme_lookup.add(noeud)
             state_count += 1
-            print(
-                f"{state_count=}, Depth: {noeud.depth}, eval={eval_score}")
+            print(f"{state_count=}, Depth: {noeud.depth}, eval={eval_score}")
 
             if noeud.is_goal():
                 path_solution = []
                 while noeud:
                     path_solution.append(noeud)
                     noeud = noeud.parent
-                path_solution.reverse()
-                return path_solution
+                return path_solution[::-1]
 
             for m in noeud.actions():
                 if m not in ferme_lookup :
-                    eval_func = m.evaluation_func(
-                        position=(m.row, m.col),
-                        a=a, b=b, c=c
-                    )
-                    heapq.heappush(ouvert_stack, (eval_func, id(m), m,))
+                    heapq.heappush(ouvert_stack, (m.evaluation_func(position=(m.row, m.col), a=a, b=b, c=c), id(m), m,))
 
         return []
 
-    @staticmethod
-    def get_number_of_ones(world: list[list[int]]) -> int:
-            count = sum(row.count(1) for row in world)
-            return count
-
-
-    def evaluation_func(self,position,a,b,c,nb=0):
-        world_3 = self.get_the_world(3,position=position)
-        world_5= self.get_the_world(5,position=position)
-        number_of_ones_in_k3_world = Grid.get_number_of_ones(world_3)
-        number_of_ones_in_k5_world = Grid.get_number_of_ones(world_5)
+    def evaluation_func(self,position,a,b,c):
+        world_3,row_3,col_3 = self.get_the_world(3,position=position)
+        world_5,row_5,col_5= self.get_the_world(5,position=position)
+        number_of_ones_in_k3_world = sum(row.count(1) for row in world_3)
+        number_of_ones_in_k5_world = sum(row.count(1) for row in world_5)
         p_3 = number_of_ones_in_k3_world - solve_rec(world_3,
-                                                     x=1,
-                                                     y=1,
+                                                     x=row_3,
+                                                     y=col_3,
                                                      nb=0,
                                                      n=number_of_ones_in_k3_world)
         p_5 = number_of_ones_in_k5_world - solve_rec(world_5,
-                                                     x=2,
-                                                     y=2,
+                                                     x=row_5,
+                                                     y=col_5,
                                                      nb=0,
                                                      n=number_of_ones_in_k5_world)
         return  (a*p_5) + (b*p_3) - (self.depth/c)
@@ -274,7 +248,6 @@ class Grid:
     def get_the_world(self, k: int, position: tuple[int, int]):
         row, col = position
         half_k = k // 2
-
         start_row = max(0, row - half_k)
         end_row = min(len(self.board), row + half_k + 1)
         start_col = max(0, col - half_k)
@@ -285,7 +258,7 @@ class Grid:
         relative_row = row - start_row
         relative_col = col - start_col
 
-        return copy.deepcopy(world)
+        return copy.deepcopy(world) , relative_row , relative_col
 
 
 def solve_rec(world, x: int, y: int, nb: int, n: int) -> int:
@@ -330,39 +303,36 @@ def solve_rec(world, x: int, y: int, nb: int, n: int) -> int:
     return mx
 
 
-
-
-
 if __name__ == "__main__":
-    # 0,1,50 _                 1 ,0, 50  rw
+    # 1 ,0, 50
     benchmark1 = [[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0], [0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0],
                   [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0], [0, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1],
                   [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1], [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
                   [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1], [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
                   [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 1], [0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
                   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1]]
-    # 1, 1, 50 _ 2261               rw 1,1,50 _ 3158
+    # 0 ,1 ,50
     benchmark2 = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                   [1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1], [1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
                   [1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0], [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
                   [1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0], [1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0],
                   [1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0], [1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
                   [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0]]
-    # 1, 1, 10 _ 18612  rw _ 48448
+    # 1, 1, 50
     benchmark3 = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0], [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1],
                   [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1],
                   [0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0], [0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0],
                   [0, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1], [0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1],
                   [0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1], [0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1],
                   [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0]]
-    # 1, 1, 50 _ 371          rw_700
+    # 1, 1, 50
     benchmark4 = [[1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], [1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 0],
                   [0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1], [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
                   [0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0], [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
                   [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0], [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
                   [1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0], [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
                   [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0], [1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-
+    # 1, 1, 50
     benchmark5 = [[1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0], [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
                   [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1], [0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1],
                   [0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 1, 0], [1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0],
@@ -384,19 +354,20 @@ if __name__ == "__main__":
                   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                   [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
+
+
     gr = Grid(benchmark1)
-     # for all benchmarks, the starting point is (3,3)
+    # for all benchmarks, the starting point is (3,3)
     gr.set_row_col(3, 3)
     path = gr.solve_breadth()
     # path = gr.solve_depth()
     # path = gr.solve_random()
-    # path = gr.solve_heur(1, 1, 50) #benchmark2 , benchmark4
-    # path = gr.solve_heur(1, 1, 10)  #benchmark3
-    # path = gr.solve_heur(0, 1, 50)  #benchmark1
+    # path = gr.solve_heur(1, 0, 50)  #benchmark1
+    # path = gr.solve_heur(0, 1, 50)  #benchmark2
+    # path = gr.solve_heur(1, 1, 50) #benchmark3 , benchmark4 , #benchmark5
     if path:
       GridVisualizer(path)
     else:
         print('No solution')
-
 
 
